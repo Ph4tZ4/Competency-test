@@ -14,7 +14,7 @@ export default function LoginScreen({ navigation }) {
                 username,
                 password
             });
-            login(response.data.user);
+            login({ ...response.data.user, token: response.data.token });
         } catch (error) {
             Alert.alert('Error', 'Login ไม่ผ่าน เช็ค Username/Password หรือ Server');
             console.log(error);
