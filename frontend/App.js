@@ -12,6 +12,8 @@ import RegisterScreen from './screens/RegisterScreen';
 import HomeScreen from './screens/HomeScreen';
 import BorrowScreen from './screens/BorrowScreen';
 import HistoryScreen from './screens/HistoryScreen';
+import AddBookScreen from './screens/AddBookScreen';
+import MainTabs from './navigation/MainTabs';
 
 const Stack = createNativeStackNavigator();
 
@@ -33,9 +35,9 @@ function AppNavigation() {
                 {user ? (
                     // === Zone คนล็อกอินแล้ว ===
                     <>
-                        <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'ห้องสมุด' }} initialParams={{ user }} />
+                        <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
                         <Stack.Screen name="Borrow" component={BorrowScreen} options={{ title: 'ยืมหนังสือ' }} />
-                        <Stack.Screen name="History" component={HistoryScreen} options={{ title: 'ประวัติการยืม-คืน' }} />
+                        <Stack.Screen name="AddBook" component={AddBookScreen} options={{ title: 'เพิ่มหนังสือ (Admin)' }} />
                     </>
                 ) : (
                     // === Zone คนยังไม่ล็อกอิน ===

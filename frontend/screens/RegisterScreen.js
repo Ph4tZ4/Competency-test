@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
 import axiosClient from '../api/axiosClient';
 
 export default function RegisterScreen({ navigation }) {
@@ -13,15 +13,14 @@ export default function RegisterScreen({ navigation }) {
         }
 
         try {
-            // ส่งข้อมูลไปสมัครสมาชิก (Role: member เป็นค่า default จาก backend อยู่แล้ว)
             await axiosClient.post('/register', {
                 username,
                 password,
-                role: 'member' // หรือถ้าอยากเทส Admin ให้แก้ตรงนี้เป็น 'admin'
+                role: 'member'
             });
 
             Alert.alert('สำเร็จ', 'สมัครสมาชิกเรียบร้อย', [
-                { text: 'ตกลง', onPress: () => navigation.goBack() } // กดตกลงแล้วกลับไปหน้า Login
+                { text: 'ตกลง', onPress: () => navigation.goBack() }
             ]);
         } catch (error) {
             console.log(error);
@@ -30,28 +29,126 @@ export default function RegisterScreen({ navigation }) {
     };
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>สมัครสมาชิกใหม่</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="ตั้งชื่อผู้ใช้ (Username)"
-                value={username}
-                onChangeText={setUsername}
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="ตั้งรหัสผ่าน (Password)"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-            />
-            <Button title="ยืนยันการสมัคร" onPress={handleRegister} color="#28a745" />
-        </View>
+        <SafeAreaView style={styles.container}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={styles.contentContainer}
+            >
+                <View style={styles.headerContainer}>
+                    <Text style={styles.title}>Create Account</Text>
+                    <Text style={styles.subtitle}>Sign up to get started</Text>
+                </View>
+
+                <View style={styles.formContainer}>
+                    <View style={styles.inputGroup}>
+                        <TextInput
+                            style={styles.inputHeader}
+                            placeholder="Choose a Username"
+                            value={username}
+                            onChangeText={setUsername}
+                            autoCapitalize="none"
+                            placeholderTextColor="#8e8e93"
+                        />
+                        <View style={styles.separator} />
+                        <TextInput
+                            style={styles.inputFooter}
+                            placeholder="Choose a Password"
+                            secureTextEntry
+                            value={password}
+                            onChangeText={setPassword}
+                            placeholderTextColor="#8e8e93"
+                        />
+                    </View>
+
+                    <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
+                        <Text style={styles.registerButtonText}>Sign Up</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.loginLinkButton}
+                        onPress={() => navigation.goBack()}
+                    >
+                        <Text style={styles.loginLinkText}>Already have an account?</Text>
+                    </TouchableOpacity>
+                </View>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: '#fff' },
-    title: { fontSize: 24, marginBottom: 20, textAlign: 'center', fontWeight: 'bold' },
-    input: { borderWidth: 1, borderColor: '#ccc', padding: 12, marginBottom: 15, borderRadius: 5 }
+    container: {
+        flex: 1,
+        backgroundColor: '#F2F2F7',
+    },
+    contentContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        padding: 20,
+    },
+    headerContainer: {
+        alignItems: 'center',
+        marginBottom: 40,
+    },
+    title: {
+        fontSize: 28,
+        fontWeight: '700',
+        color: '#000',
+        marginBottom: 8,
+    },
+    subtitle: {
+        fontSize: 16,
+        color: '#8e8e93',
+    },
+    formContainer: {
+        width: '100%',
+    },
+    inputGroup: {
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        marginBottom: 24,
+        overflow: 'hidden',
+    },
+    inputHeader: {
+        padding: 16,
+        fontSize: 17,
+        backgroundColor: '#fff',
+    },
+    inputFooter: {
+        padding: 16,
+        fontSize: 17,
+        backgroundColor: '#fff',
+    },
+    separator: {
+        height: 1,
+        backgroundColor: '#c6c6c8',
+        marginLeft: 16,
+    },
+    registerButton: {
+        backgroundColor: '#34C759', // iOS Green
+        paddingVertical: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+        marginBottom: 16,
+        shadowColor: "#34C759",
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        },
+        shadowOpacity: 0.3,
+        shadowRadius: 4.65,
+        elevation: 8,
+    },
+    registerButtonText: {
+        color: '#fff',
+        fontSize: 17,
+        fontWeight: '600',
+    },
+    loginLinkButton: {
+        alignItems: 'center',
+    },
+    loginLinkText: {
+        color: '#007AFF',
+        fontSize: 16,
+    },
 });

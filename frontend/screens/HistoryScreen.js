@@ -1,19 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, Button, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Alert, TouchableOpacity, SafeAreaView, Platform } from 'react-native';
 import axiosClient from '../api/axiosClient';
 
 export default function HistoryScreen({ route, navigation }) {
     const { user } = route.params;
     const [history, setHistory] = useState([]);
 
-    // ฟังก์ชันดึงประวัติ
     const fetchHistory = async () => {
         try {
             const response = await axiosClient.get(`/history/${user._id}`);
             setHistory(response.data);
         } catch (error) {
             console.log(error);
-            Alert.alert('Error', 'โหลดประวัติไม่สำเร็จ');
+            Alert.alert('Error', 'Failed to load history');
         }
     };
 
@@ -21,50 +20,61 @@ export default function HistoryScreen({ route, navigation }) {
         fetchHistory();
     }, []);
 
-    // ฟังก์ชันคืนหนังสือ
     const handleReturn = async (transactionId) => {
         try {
             await axiosClient.post('/return', {
                 transaction_id: transactionId
             });
 
-            Alert.alert('สำเร็จ', 'คืนหนังสือเรียบร้อยแล้ว');
-            fetchHistory(); // โหลดข้อมูลใหม่เพื่ออัปเดตสถานะปุ่ม
+            Alert.alert('Success', 'Book returned successfully');
+            fetchHistory();
         } catch (error) {
-            Alert.alert('Error', 'คืนหนังสือไม่สำเร็จ');
+            Alert.alert('Error', 'Could not return book');
         }
     };
 
     const renderItem = ({ item }) => {
-        // เช็คว่า item.book_id มีค่าไหม (เผื่อกรณีหนังสือถูกลบไปแล้ว)
-        const bookTitle = item.book_id ? item.book_id.title : 'หนังสือถูกลบจากระบบ';
+        const bookTitle = item.book_id ? item.book_id.title : 'Details not available';
         const isBorrowed = item.status === 'borrowed';
 
         return (
-            <View style={[styles.card, isBorrowed ? styles.borderActive : styles.borderReturned]}>
-                <View style={{ flex: 1 }}>
+            <View style={styles.card}>
+                <View style={styles.cardHeader}>
                     <Text style={styles.bookTitle}>{bookTitle}</Text>
-                    <Text>วันที่ยืม: {new Date(item.borrow_date).toLocaleDateString('th-TH')}</Text>
-                    <Text>กำหนดคืน: {new Date(item.due_date).toLocaleDateString('th-TH')}</Text>
-
-                    {item.return_date && (
-                        <Text style={{ color: 'green' }}>
-                            คืนเมื่อ: {new Date(item.return_date).toLocaleDateString('th-TH')}
-                        </Text>
+                    {isBorrowed ? (
+                        <View style={styles.badgeBorrowed}>
+                            <Text style={styles.badgeTextBorrowed}>Borrowed</Text>
+                        </View>
+                    ) : (
+                        <View style={styles.badgeReturned}>
+                            <Text style={styles.badgeTextReturned}>Returned</Text>
+                        </View>
                     )}
-
-                    <Text style={{ fontWeight: 'bold', marginTop: 5, color: isBorrowed ? 'orange' : 'green' }}>
-                        สถานะ: {isBorrowed ? 'กำลังยืม (Borrowed)' : 'คืนแล้ว (Returned)'}
-                    </Text>
                 </View>
 
-                {/* ปุ่มคืนหนังสือ (แสดงเฉพาะตอนที่ยังไม่คืน) */}
+                <View style={styles.infoContainer}>
+                    <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Borrowed:</Text>
+                        <Text style={styles.infoValue}>{new Date(item.borrow_date).toLocaleDateString('th-TH')}</Text>
+                    </View>
+                    <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Due Date:</Text>
+                        <Text style={styles.infoValue}>{new Date(item.due_date).toLocaleDateString('th-TH')}</Text>
+                    </View>
+                    {item.return_date && (
+                        <View style={styles.infoRow}>
+                            <Text style={styles.infoLabel}>Returned On:</Text>
+                            <Text style={styles.infoValue}>{new Date(item.return_date).toLocaleDateString('th-TH')}</Text>
+                        </View>
+                    )}
+                </View>
+
                 {isBorrowed && (
                     <TouchableOpacity
                         style={styles.returnButton}
                         onPress={() => handleReturn(item._id)}
                     >
-                        <Text style={{ color: '#fff' }}>กดคืน</Text>
+                        <Text style={styles.returnButtonText}>Return Book</Text>
                     </TouchableOpacity>
                 )}
             </View>
@@ -72,26 +82,122 @@ export default function HistoryScreen({ route, navigation }) {
     };
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.header}>ประวัติการยืม-คืน</Text>
+        <SafeAreaView style={styles.container}>
+            <Text style={styles.screenTitle}>My History</Text>
             <FlatList
                 data={history}
                 keyExtractor={(item) => item._id}
                 renderItem={renderItem}
                 refreshing={false}
-                onRefresh={fetchHistory} // ดึงลงเพื่อรีเฟรช
-                ListEmptyComponent={<Text style={{ textAlign: 'center', marginTop: 20 }}>ยังไม่มีประวัติการยืม</Text>}
+                onRefresh={fetchHistory}
+                contentContainerStyle={styles.listContainer}
+                ListEmptyComponent={
+                    <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>No history found.</Text>
+                    </View>
+                }
             />
-        </View>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 20, backgroundColor: '#f5f5f5' },
-    header: { fontSize: 22, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },
-    card: { backgroundColor: '#fff', padding: 15, borderRadius: 8, marginBottom: 10, flexDirection: 'row', alignItems: 'center', borderWidth: 1 },
-    borderActive: { borderColor: 'orange' },
-    borderReturned: { borderColor: '#ccc' },
-    bookTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 5 },
-    returnButton: { backgroundColor: '#dc3545', paddingVertical: 10, paddingHorizontal: 15, borderRadius: 5, marginLeft: 10 }
+    container: {
+        flex: 1,
+        backgroundColor: '#F2F2F7',
+    },
+    screenTitle: {
+        fontSize: 28,
+        fontWeight: '700',
+        color: '#000',
+        marginHorizontal: 20,
+        marginTop: 20,
+        marginBottom: 12,
+    },
+    listContainer: {
+        paddingHorizontal: 20,
+        paddingBottom: 100, // Increased for floating tab bar
+    },
+    card: {
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 16,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 12,
+    },
+    bookTitle: {
+        flex: 1,
+        fontSize: 17,
+        fontWeight: '600',
+        color: '#000',
+        marginRight: 8,
+    },
+    badgeBorrowed: {
+        backgroundColor: '#FFF4E5',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+    badgeTextBorrowed: {
+        color: '#FF9500', // iOS Orange
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    badgeReturned: {
+        backgroundColor: '#E8F5E9',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+    badgeTextReturned: {
+        color: '#34C759', // iOS Green
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    infoContainer: {
+        marginBottom: 12,
+    },
+    infoRow: {
+        flexDirection: 'row',
+        marginBottom: 4,
+    },
+    infoLabel: {
+        fontSize: 14,
+        color: '#8e8e93',
+        width: 100,
+    },
+    infoValue: {
+        fontSize: 14,
+        color: '#000',
+    },
+    returnButton: {
+        backgroundColor: '#FF3B30', // iOS Red
+        paddingVertical: 10,
+        borderRadius: 10,
+        alignItems: 'center',
+        marginTop: 4,
+    },
+    returnButtonText: {
+        color: '#fff',
+        fontWeight: '600',
+        fontSize: 15,
+    },
+    emptyContainer: {
+        marginTop: 50,
+        alignItems: 'center',
+    },
+    emptyText: {
+        fontSize: 16,
+        color: '#8e8e93',
+    },
 });
