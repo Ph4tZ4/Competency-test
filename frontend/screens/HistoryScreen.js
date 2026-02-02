@@ -36,16 +36,30 @@ export default function HistoryScreen({ route, navigation }) {
     const renderItem = ({ item }) => {
         const bookTitle = item.book_id ? item.book_id.title : 'Details not available';
         const isBorrowed = item.status === 'borrowed';
+        const isPending = item.status === 'pending';
+        const isRejected = item.status === 'rejected';
+        const isReturned = item.status === 'returned';
 
         return (
             <View style={styles.card}>
                 <View style={styles.cardHeader}>
                     <Text style={styles.bookTitle}>{bookTitle}</Text>
-                    {isBorrowed ? (
+                    {isBorrowed && (
                         <View style={styles.badgeBorrowed}>
                             <Text style={styles.badgeTextBorrowed}>Borrowed</Text>
                         </View>
-                    ) : (
+                    )}
+                    {isPending && (
+                        <View style={styles.badgePending}>
+                            <Text style={styles.badgeTextPending}>Pending</Text>
+                        </View>
+                    )}
+                    {isRejected && (
+                        <View style={styles.badgeRejected}>
+                            <Text style={styles.badgeTextRejected}>Rejected</Text>
+                        </View>
+                    )}
+                    {isReturned && (
                         <View style={styles.badgeReturned}>
                             <Text style={styles.badgeTextReturned}>Returned</Text>
                         </View>
@@ -161,6 +175,28 @@ const styles = StyleSheet.create({
     },
     badgeTextReturned: {
         color: '#34C759', // iOS Green
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    badgePending: {
+        backgroundColor: '#E5F1FB',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+    badgeTextPending: {
+        color: '#007AFF', // iOS Blue
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    badgeRejected: {
+        backgroundColor: '#FFE5E5',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+    badgeTextRejected: {
+        color: '#FF3B30', // iOS Red
         fontSize: 12,
         fontWeight: '600',
     },

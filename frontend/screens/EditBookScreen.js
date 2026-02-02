@@ -1,33 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
 import axiosClient from '../api/axiosClient';
 
-export default function AddBookScreen({ navigation }) {
-    const [title, setTitle] = useState('');
-    const [author, setAuthor] = useState('');
-    const [quantity, setQuantity] = useState('');
-    const [coverImage, setCoverImage] = useState('');
+export default function EditBookScreen({ route, navigation }) {
+    const { book } = route.params;
 
-    const handleAddBook = async () => {
+    const [title, setTitle] = useState(book.title);
+    const [author, setAuthor] = useState(book.author);
+    const [quantity, setQuantity] = useState(book.quantity.toString());
+    const [coverImage, setCoverImage] = useState(book.coverImage || '');
+
+    const handleUpdateBook = async () => {
         if (!title || !author || !quantity) {
             Alert.alert('Missing Information', 'Please fill in all fields.');
             return;
         }
 
         try {
-            await axiosClient.post('/books', {
+            await axiosClient.put(`/books/${book._id}`, {
                 title,
                 author,
                 quantity: parseInt(quantity),
                 coverImage
             });
 
-            Alert.alert('Success', 'Book added successfully', [
+            Alert.alert('Success', 'Book updated successfully', [
                 { text: 'OK', onPress: () => navigation.goBack() }
             ]);
         } catch (error) {
             console.log(error);
-            Alert.alert('Error', 'Could not add book.');
+            Alert.alert('Error', 'Could not update book.');
         }
     };
 
@@ -38,8 +40,8 @@ export default function AddBookScreen({ navigation }) {
                 style={styles.contentContainer}
             >
                 <View style={styles.header}>
-                    <Text style={styles.headerTitle}>New Book</Text>
-                    <Text style={styles.headerSubtitle}>Enter book details below</Text>
+                    <Text style={styles.headerTitle}>Edit Book</Text>
+                    <Text style={styles.headerSubtitle}>Update book details below</Text>
                 </View>
 
                 <View style={styles.formGroup}>
@@ -94,8 +96,8 @@ export default function AddBookScreen({ navigation }) {
                 </View>
 
                 <View style={styles.actions}>
-                    <TouchableOpacity style={styles.saveButton} onPress={handleAddBook}>
-                        <Text style={styles.saveButtonText}>Save Book</Text>
+                    <TouchableOpacity style={styles.saveButton} onPress={handleUpdateBook}>
+                        <Text style={styles.saveButtonText}>Update Book</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>

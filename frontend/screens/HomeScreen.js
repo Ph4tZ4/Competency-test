@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert, SafeAreaView, TextInput } from 'react-native';
-import axiosClient from '../api/axiosClient';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert, SafeAreaView, TextInput, Image } from 'react-native';
+import axiosClient, { BASE_URL } from '../api/axiosClient';
 import { AuthContext } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons'; // Assuming Expo, if not we can use generic text
 
@@ -64,20 +64,58 @@ export default function HomeScreen({ navigation }) {
         navigation.navigate('Borrow', { book, user });
     };
 
+    const handleDeleteBook = (book) => {
+        Alert.alert(
+            'Confirm Delete',
+            `Are you sure you want to delete "${book.title}"?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await axiosClient.delete(`/books/${book._id}`);
+                            Alert.alert('Success', 'Book deleted successfully');
+                            fetchBooks(page, searchQuery);
+                        } catch (error) {
+                            console.error(error);
+                            Alert.alert('Error', 'Could not delete book');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     const renderBookItem = ({ item }) => (
         <View style={styles.card}>
             <View style={styles.cardContent}>
-                <Text style={styles.bookTitle}>{item.title}</Text>
-                <Text style={styles.bookAuthor}>{item.author}</Text>
+                {item.coverImage ? (
+                    <Image
+                        source={{ uri: item.coverImage.startsWith('http') ? item.coverImage : `${BASE_URL}${item.coverImage}` }}
+                        style={styles.bookImage}
+                        resizeMode="cover"
+                    />
+                ) : (
+                    <View style={styles.placeholderImage}>
+                        <Ionicons name="book-outline" size={40} color="#ccc" />
+                    </View>
+                )}
+                <View style={styles.textContainer}>
+                    <Text style={styles.bookTitle}>{item.title}</Text>
+                    <Text style={styles.bookAuthor}>{item.author}</Text>
 
-                <View style={styles.statusContainer}>
-                    <View style={[
-                        styles.statusDot,
-                        { backgroundColor: item.quantity > 0 ? '#34C759' : '#FF3B30' }
-                    ]} />
-                    <Text style={styles.statusText}>
-                        {item.quantity > 0 ? 'Available' : 'Out of Stock'}
-                    </Text>
+
+                    <View style={styles.statusContainer}>
+                        <View style={[
+                            styles.statusDot,
+                            { backgroundColor: item.quantity > 0 ? '#34C759' : '#FF3B30' }
+                        ]} />
+                        <Text style={styles.statusText}>
+                            {item.quantity > 0 ? 'Available' : 'Out of Stock'}
+                        </Text>
+                    </View>
                 </View>
             </View>
 
@@ -89,13 +127,42 @@ export default function HomeScreen({ navigation }) {
                     <Text style={styles.borrowButtonText}>Borrow</Text>
                 </TouchableOpacity>
             )}
+
+            {user.role === 'admin' && (
+                <View style={styles.adminActions}>
+                    <TouchableOpacity
+                        style={styles.editButton}
+                        onPress={() => navigation.navigate('EditBook', { book: item })}
+                    >
+                        <Ionicons name="pencil-outline" size={20} color="#007AFF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.deleteButton}
+                        onPress={() => handleDeleteBook(item)}
+                    >
+                        <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                    </TouchableOpacity>
+                </View>
+            )}
         </View>
     );
 
-    const handleUserProfilePress = () => {
+    const [dropdownVisible, setDropdownVisible] = useState(false);
+
+    const toggleDropdown = () => {
+        setDropdownVisible(!dropdownVisible);
+    };
+
+    const handleProfilePress = () => {
+        setDropdownVisible(false);
+        navigation.navigate('Profile');
+    };
+
+    const handleLogoutPress = () => {
+        setDropdownVisible(false);
         Alert.alert(
-            user.username,
-            'Do you want to log out?',
+            'Confirm Logout',
+            'Are you sure you want to log out?',
             [
                 { text: 'Cancel', style: 'cancel' },
                 { text: 'Log Out', style: 'destructive', onPress: logout }
@@ -107,9 +174,31 @@ export default function HomeScreen({ navigation }) {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.appTitle}>My Library</Text>
-                <TouchableOpacity onPress={handleUserProfilePress}>
-                    <Ionicons name="person-circle" size={40} color="#000000" />
-                </TouchableOpacity>
+                <View>
+                    <TouchableOpacity onPress={toggleDropdown}>
+                        <Ionicons name="person-circle" size={40} color="#000000" />
+                    </TouchableOpacity>
+
+                    {dropdownVisible && (
+                        <>
+                            <TouchableOpacity
+                                style={styles.dropdownOverlay}
+                                onPress={() => setDropdownVisible(false)}
+                            />
+                            <View style={styles.dropdownMenu}>
+                                <TouchableOpacity style={styles.dropdownItem} onPress={handleProfilePress}>
+                                    <Ionicons name="person-outline" size={20} color="#000" />
+                                    <Text style={styles.dropdownText}>Profile</Text>
+                                </TouchableOpacity>
+                                <View style={styles.divider} />
+                                <TouchableOpacity style={styles.dropdownItem} onPress={handleLogoutPress}>
+                                    <Ionicons name="log-out-outline" size={20} color="#FF3B30" />
+                                    <Text style={[styles.dropdownText, { color: '#FF3B30' }]}>Log Out</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </>
+                    )}
+                </View>
             </View>
 
             {user.role === 'admin' && (
@@ -269,6 +358,27 @@ const styles = StyleSheet.create({
     },
     cardContent: {
         flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    bookImage: {
+        width: 60,
+        height: 90,
+        borderRadius: 8,
+        marginRight: 16,
+        backgroundColor: '#e1e1e1',
+    },
+    placeholderImage: {
+        width: 60,
+        height: 90,
+        borderRadius: 8,
+        marginRight: 16,
+        backgroundColor: '#f2f2f7',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    textContainer: {
+        flex: 1,
     },
     bookTitle: {
         fontSize: 17,
@@ -308,6 +418,17 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         fontSize: 14,
     },
+    deleteButton: {
+        marginLeft: 10,
+        padding: 8,
+    },
+    editButton: {
+        marginLeft: 10,
+        padding: 8,
+    },
+    adminActions: {
+        flexDirection: 'row',
+    },
     addButton: {
         marginHorizontal: 20,
         backgroundColor: '#007AFF',
@@ -325,6 +446,46 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontWeight: '600',
         fontSize: 16,
+    },
+    dropdownOverlay: {
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: 'transparent',
+    },
+    dropdownMenu: {
+        position: 'absolute',
+        top: 50,
+        right: 0,
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        width: 150,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 5,
+        zIndex: 1000,
+        paddingVertical: 5,
+    },
+    dropdownItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        gap: 10,
+    },
+    dropdownText: {
+        fontSize: 16,
+        fontWeight: '500',
+        color: '#000',
+    },
+    divider: {
+        height: 1,
+        backgroundColor: '#e5e5ea',
+        marginHorizontal: 10,
     },
 
 });

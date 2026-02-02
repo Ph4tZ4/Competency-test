@@ -45,7 +45,7 @@ const createBook = async (req, res, next) => {
     try {
         const { title, author, quantity } = req.body;
 
-        let coverImage = '';
+        let coverImage = req.body.coverImage || '';
         if (req.file) {
             coverImage = `/uploads/${req.file.filename}`;
         }
@@ -64,4 +64,48 @@ const createBook = async (req, res, next) => {
     }
 };
 
-module.exports = { getBooks, createBook };
+const deleteBook = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const book = await Book.findByIdAndDelete(id);
+
+        if (!book) {
+            return res.status(404).json({ message: 'Book not found' });
+        }
+
+        res.json({ message: 'Book deleted successfully' });
+    } catch (err) {
+        next(err);
+    }
+};
+
+const updateBook = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { title, author, quantity } = req.body;
+
+        let updateData = {
+            title,
+            author,
+            quantity
+        };
+
+        if (req.file) {
+            updateData.coverImage = `/uploads/${req.file.filename}`;
+        } else if (req.body.coverImage) {
+            updateData.coverImage = req.body.coverImage;
+        }
+
+        const book = await Book.findByIdAndUpdate(id, updateData, { new: true });
+
+        if (!book) {
+            return res.status(404).json({ message: 'Book not found' });
+        }
+
+        res.json(book);
+    } catch (err) {
+        next(err);
+    }
+};
+
+module.exports = { getBooks, createBook, deleteBook, updateBook };

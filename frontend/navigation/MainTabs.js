@@ -7,6 +7,8 @@ import { View, Platform } from 'react-native';
 // Screens
 import HomeScreen from '../screens/HomeScreen';
 import HistoryScreen from '../screens/HistoryScreen';
+import DashboardScreen from '../screens/DashboardScreen';
+import UserListScreen from '../screens/UserListScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -22,6 +24,10 @@ export default function MainTabs() {
                         iconName = focused ? 'home' : 'home-outline';
                     } else if (route.name === 'HistoryTab') {
                         iconName = focused ? 'time' : 'time-outline';
+                    } else if (route.name === 'DashboardTab') {
+                        iconName = focused ? 'stats-chart' : 'stats-chart-outline';
+                    } else if (route.name === 'UsersTab') {
+                        iconName = focused ? 'people' : 'people-outline';
                     }
                     return <Ionicons name={iconName} size={30} color={color} />;
                 },
@@ -72,12 +78,33 @@ export default function MainTabs() {
                 component={HomeScreen}
                 options={{ title: 'Home' }}
             />
-            <Tab.Screen
-                name="HistoryTab"
-                component={HistoryScreen}
-                options={{ title: 'History' }}
-                initialParams={{ user }}
-            />
+            {user.role === 'admin' ? (
+                <>
+                    <Tab.Screen
+                        name="DashboardTab"
+                        component={DashboardScreen}
+                        options={{ title: 'Dashboard' }}
+                    />
+                    <Tab.Screen
+                        name="UsersTab"
+                        component={UserListScreen}
+                        options={{ title: 'Member' }}
+                    />
+                    <Tab.Screen
+                        name="HistoryTab"
+                        component={HistoryScreen}
+                        options={{ title: 'History' }}
+                        initialParams={{ user }}
+                    />
+                </>
+            ) : (
+                <Tab.Screen
+                    name="HistoryTab"
+                    component={HistoryScreen}
+                    options={{ title: 'History' }}
+                    initialParams={{ user }}
+                />
+            )}
         </Tab.Navigator>
     );
 }

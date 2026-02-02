@@ -7,7 +7,10 @@ const borrowBook = async (req, res, next) => {
     try {
         const book = await Book.findById(book_id);
         if (!book) return res.status(404).json({ error: 'Book not found' });
-        if (book.quantity < 1) return res.status(400).json({ error: 'Book out of stock' });
+        if (book.quantity < 1) {
+            console.warn(`Book ${book_id} out of stock. Qty: ${book.quantity}`);
+            return res.status(400).json({ error: 'Book out of stock' });
+        }
 
         const dueDate = new Date();
         dueDate.setDate(dueDate.getDate() + 7);
@@ -16,14 +19,15 @@ const borrowBook = async (req, res, next) => {
             user_id,
             book_id,
             due_date: dueDate,
-            status: 'borrowed'
+            status: 'pending'
         });
+        console.log('Creating transaction:', transaction);
         await transaction.save();
 
         book.quantity -= 1;
         await book.save();
 
-        res.status(201).json({ message: 'Borrow successful', transaction });
+        res.status(201).json({ message: 'Borrow request submitted, waiting for approval', transaction });
     } catch (err) {
         next(err);
     }
@@ -68,9 +72,13 @@ const getHistory = async (req, res, next) => {
 
 const getBorrowedBooks = async (req, res, next) => {
     try {
-        const borrowedBooks = await Transaction.find({ status: 'borrowed' })
+        // Fetch both borrowed and pending to show full activity
+        const borrowedBooks = await Transaction.find({
+            status: { $in: ['borrowed', 'pending', 'rejected', 'returned'] }
+        })
             .populate('user_id', 'username')
-            .populate('book_id', 'title author');
+            .populate('book_id', 'title author')
+            .sort({ createdAt: -1 });
 
         res.json(borrowedBooks);
     } catch (err) {
@@ -78,4 +86,56 @@ const getBorrowedBooks = async (req, res, next) => {
     }
 };
 
-module.exports = { borrowBook, returnBook, getHistory, getBorrowedBooks };
+const getPendingTransactions = async (req, res, next) => {
+    try {
+        const transactions = await Transaction.find({ status: 'pending' })
+            .populate('user_id', 'username')
+            .populate('book_id', 'title author');
+        res.json(transactions);
+    } catch (err) {
+        next(err);
+    }
+};
+
+const approveTransaction = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const transaction = await Transaction.findById(id);
+
+        if (!transaction) return res.status(404).json({ error: 'Transaction not found' });
+        if (transaction.status !== 'pending') return res.status(400).json({ error: 'Transaction is not pending' });
+
+        transaction.status = 'borrowed';
+        await transaction.save();
+
+        res.json({ message: 'Transaction approved', transaction });
+    } catch (err) {
+        next(err);
+    }
+};
+
+const rejectTransaction = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const transaction = await Transaction.findById(id);
+
+        if (!transaction) return res.status(404).json({ error: 'Transaction not found' });
+        if (transaction.status !== 'pending') return res.status(400).json({ error: 'Transaction is not pending' });
+
+        transaction.status = 'rejected';
+        await transaction.save();
+
+        // Refund stock since we deducted it when request was made
+        const book = await Book.findById(transaction.book_id);
+        if (book) {
+            book.quantity += 1;
+            await book.save();
+        }
+
+        res.json({ message: 'Transaction rejected', transaction });
+    } catch (err) {
+        next(err);
+    }
+};
+
+module.exports = { borrowBook, returnBook, getHistory, getBorrowedBooks, getPendingTransactions, approveTransaction, rejectTransaction };

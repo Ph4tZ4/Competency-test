@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, SafeAreaView, Platform } from 'react-native';
-import axiosClient from '../api/axiosClient';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, SafeAreaView, Platform, Image } from 'react-native';
+import axiosClient, { BASE_URL } from '../api/axiosClient';
 
 export default function BorrowScreen({ route, navigation }) {
     const { book, user } = route.params;
@@ -12,7 +12,7 @@ export default function BorrowScreen({ route, navigation }) {
                 book_id: book._id
             });
 
-            Alert.alert('Success', 'Book borrowed successfully!', [
+            Alert.alert('Success', 'Borrow request submitted. Please wait for admin approval.', [
                 {
                     text: 'OK',
                     onPress: () => navigation.navigate('Main') // Navigate to the Tab Navigator
@@ -30,6 +30,15 @@ export default function BorrowScreen({ route, navigation }) {
                 <Text style={styles.screenTitle}>Confirm Borrow</Text>
 
                 <View style={styles.card}>
+                    {book.coverImage && (
+                        <View style={styles.imageContainer}>
+                            <Image
+                                source={{ uri: book.coverImage.startsWith('http') ? book.coverImage : `${BASE_URL}${book.coverImage}` }}
+                                style={styles.bookImage}
+                                resizeMode="contain"
+                            />
+                        </View>
+                    )}
                     <Text style={styles.bookTitle}>{book.title}</Text>
                     <Text style={styles.bookAuthor}>by {book.author}</Text>
 
@@ -83,8 +92,25 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 12,
+        shadowRadius: 12,
         elevation: 5,
         marginBottom: 30,
+        alignItems: 'center',
+    },
+    imageContainer: {
+        marginBottom: 16,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 5,
+        backgroundColor: '#fff',
+        borderRadius: 8,
+    },
+    bookImage: {
+        width: 120,
+        height: 180,
+        borderRadius: 8,
     },
     bookTitle: {
         fontSize: 22,
